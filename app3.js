@@ -483,7 +483,7 @@ pm2.connect(function (err) {
             console.log(`Iniciando o aplicativo ${appName} usando o PM2...`);
             pm2.start({
                 name: appName,
-                script: 'index.js', // Substitua pelo nome do seu arquivo principal
+                script: 'index.html', // Substitua pelo nome do seu arquivo principal
                 cwd: __dirname,
                 autorestart: true,
                 watch: true,

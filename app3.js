@@ -230,14 +230,14 @@ io.on('connection', function (socket) {
         console.log('QR RECEIVED', qr);
         qrcode.toDataURL(qr, (err, url) => {
             socket.emit('qr', url);
-            socket.emit('message', 'BOT-ZDG QRCode recebido, aponte a câmera do seu celular!');
+            socket.emit('message', 'QRCode recebido, aponte a câmera do seu celular!');
         });
     });
 
     // Evento disparado quando o cliente está pronto para uso
     client.on('ready', async () => {
-        socket.emit('ready', 'BOT-ZDG Dispositivo pronto!');
-        socket.emit('message', 'BOT-ZDG Dispositivo pronto!');
+        socket.emit('ready', 'Dispositivo pronto!');
+        socket.emit('message', 'Dispositivo pronto!');
 
 
         // Tarefa agendada para executar a lógica de envio de mensagens periodicamente
@@ -445,11 +445,56 @@ io.on('connection', function (socket) {
     client.on('disconnected', (reason) => {
         socket.emit('message', 'BOT-ZDG Cliente desconectado!');
         console.log('BOT-ZDG Cliente desconectado', reason);
-        client.initialize();
     });
 });
 
 // Inicialização do servidor
-server.listen(port, function () {
+const server = app.listen(port, function () {
     console.log('BOT-ZDG rodando na porta *:' + port);
+});
+
+// Monitorar o servidor usando o PM2
+const appName = 'bot-zdg';
+pm2.connect(function (err) {
+    if (err) {
+        console.error(err);
+        process.exit(2);
+    }
+
+    // Verificar se o aplicativo já está sendo monitorado pelo PM2
+    pm2.list(function (err, list) {
+        if (err) {
+            console.error(err);
+            process.exit(2);
+        }
+
+        const app = list.find(item => item.name === appName);
+
+        if (app) {
+            console.log(`Aplicativo ${appName} já está sendo monitorado pelo PM2. Reiniciando...`);
+            pm2.restart(appName, function (err) {
+                if (err) {
+                    console.error(err);
+                    process.exit(2);
+                }
+                pm2.disconnect();
+            });
+        } else {
+            console.log(`Iniciando o aplicativo ${appName} usando o PM2...`);
+            pm2.start({
+                name: appName,
+                script: 'index.js', // Substitua pelo nome do seu arquivo principal
+                cwd: __dirname,
+                autorestart: true,
+                watch: true,
+                max_memory_restart: '1G'
+            }, function (err) {
+                if (err) {
+                    console.error(err);
+                    process.exit(2);
+                }
+                pm2.disconnect();
+            });
+        }
+    });
 });

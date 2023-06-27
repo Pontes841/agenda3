@@ -4,7 +4,7 @@ const socketIO = require('socket.io');
 const qrcode = require('qrcode');
 const http = require('http');
 const fileUpload = require('express-fileupload');
-const port = 8002;
+const port = 8000;
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
@@ -15,9 +15,9 @@ const nodeCron = require("node-cron");
 const createConnection = async () => {
     return await mysql.createConnection({
         host: '212.1.208.101',
-        user: 'u896627913_loja02',
-        password: 'Felipe@91118825',
-        database: 'u896627913_Penedo'
+        user: 'u896627913_teste',
+        password: 'Fe91118825',
+        database: 'u896627913_teste'
     });
 }
 
@@ -230,14 +230,14 @@ io.on('connection', function (socket) {
         console.log('QR RECEIVED', qr);
         qrcode.toDataURL(qr, (err, url) => {
             socket.emit('qr', url);
-            socket.emit('message', 'QRCode recebido, aponte a câmera do seu celular!');
+            socket.emit('message', 'BOT-ZDG QRCode recebido, aponte a câmera do seu celular!');
         });
     });
 
     // Evento disparado quando o cliente está pronto para uso
     client.on('ready', async () => {
-        socket.emit('ready', 'Dispositivo pronto!');
-        socket.emit('message', 'Dispositivo pronto!');
+        socket.emit('ready', 'BOT-ZDG Dispositivo pronto!');
+        socket.emit('message', 'BOT-ZDG Dispositivo pronto!');
 
 
         // Tarefa agendada para executar a lógica de envio de mensagens periodicamente
@@ -445,56 +445,11 @@ io.on('connection', function (socket) {
     client.on('disconnected', (reason) => {
         socket.emit('message', 'BOT-ZDG Cliente desconectado!');
         console.log('BOT-ZDG Cliente desconectado', reason);
+        client.initialize();
     });
 });
 
 // Inicialização do servidor
-const server = app.listen(port, function () {
+server.listen(port, function () {
     console.log('BOT-ZDG rodando na porta *:' + port);
-});
-
-// Monitorar o servidor usando o PM2
-const appName = 'bot-zdg';
-pm2.connect(function (err) {
-    if (err) {
-        console.error(err);
-        process.exit(2);
-    }
-
-    // Verificar se o aplicativo já está sendo monitorado pelo PM2
-    pm2.list(function (err, list) {
-        if (err) {
-            console.error(err);
-            process.exit(2);
-        }
-
-        const app = list.find(item => item.name === appName);
-
-        if (app) {
-            console.log(`Aplicativo ${appName} já está sendo monitorado pelo PM2. Reiniciando...`);
-            pm2.restart(appName, function (err) {
-                if (err) {
-                    console.error(err);
-                    process.exit(2);
-                }
-                pm2.disconnect();
-            });
-        } else {
-            console.log(`Iniciando o aplicativo ${appName} usando o PM2...`);
-            pm2.start({
-                name: appName,
-                script: 'index.html', // Substitua pelo nome do seu arquivo principal
-                cwd: __dirname,
-                autorestart: true,
-                watch: true,
-                max_memory_restart: '1G'
-            }, function (err) {
-                if (err) {
-                    console.error(err);
-                    process.exit(2);
-                }
-                pm2.disconnect();
-            });
-        }
-    });
 });

@@ -4,7 +4,7 @@ const socketIO = require('socket.io');
 const qrcode = require('qrcode');
 const http = require('http');
 const fileUpload = require('express-fileupload');
-const port = 8001;
+const port = 8000;
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
@@ -212,17 +212,27 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', // <- this one doesn't work in Windows
+            '--single-process',
             '--disable-gpu'
         ]
     }
 });
 
-// Inicialização do cliente do WhatsApp
-client.initialize();
+let isConnected = false; // Estado de conexão
+
+// Função para inicializar o cliente do WhatsApp
+async function enviarMensagem(message) {
+    try {
+        await Client.sendMessage(message);
+        console.log('Mensagem enviada com sucesso');
+    } catch (error) {
+        console.error('Erro ao enviar mensagem:', error);
+    }
+}
 
 // Configuração do Socket.IO para comunicação em tempo real
 io.on('connection', function (socket) {
+    initializeClient(); // Inicializar o cliente apenas uma vez por conexão
     socket.emit('message', 'Conectando...');
 
     // Evento para receber o QR Code e exibi-lo na interface
@@ -230,14 +240,14 @@ io.on('connection', function (socket) {
         console.log('QR RECEIVED', qr);
         qrcode.toDataURL(qr, (err, url) => {
             socket.emit('qr', url);
-            socket.emit('message', 'BOT-ZDG QRCode recebido, aponte a câmera do seu celular!');
+            socket.emit('message', 'QRCode recebido, aponte a câmera do seu celular!');
         });
     });
 
     // Evento disparado quando o cliente está pronto para uso
     client.on('ready', async () => {
-        socket.emit('ready', 'BOT-ZDG Dispositivo pronto!');
-        socket.emit('message', 'BOT-ZDG Dispositivo pronto!');
+        socket.emit('ready', 'Dispositivo pronto!');
+        socket.emit('message', 'Dispositivo pronto!');
 
 
         // Tarefa agendada para executar a lógica de envio de mensagens periodicamente
@@ -422,23 +432,6 @@ io.on('connection', function (socket) {
         });
 
     });
-
-    const fs = require('fs');
-
-    // Função para verificar se o cliente já está autenticado
-    function checkAuthentication() {
-        return new Promise((resolve, reject) => {
-            fs.readFile('auth_indicator.txt', 'utf8', (err, data) => {
-                if (err) {
-                    // O arquivo de indicador de autenticação não existe ou não pode ser lido
-                    resolve(false);
-                } else {
-                    // O arquivo de indicador de autenticação existe
-                    resolve(true);
-                }
-            });
-        });
-    }
 
     // Função para verificar se o cliente já está autenticado
     function checkAuthentication() {

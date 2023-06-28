@@ -4,7 +4,7 @@ const socketIO = require('socket.io');
 const qrcode = require('qrcode');
 const http = require('http');
 const fileUpload = require('express-fileupload');
-const port = 8000;
+const port = 8002;
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
@@ -15,9 +15,9 @@ const nodeCron = require("node-cron");
 const createConnection = async () => {
     return await mysql.createConnection({
         host: '212.1.208.101',
-        user: 'u896627913_teste',
-        password: 'Fe91118825',
-        database: 'u896627913_teste'
+        user: 'u896627913_loja02',
+        password: 'Felipe@91118825',
+        database: 'u896627913_Penedo'
     });
 }
 
@@ -212,27 +212,19 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process',
+            '--single-process', // <- this one doesn't work in Windows
             '--disable-gpu'
         ]
     }
 });
 
-let isConnected = false; // Estado de conexão
-
-// Função para inicializar o cliente do WhatsApp
-async function enviarMensagem(message) {
-    try {
-        await Client.sendMessage(message);
-        console.log('Mensagem enviada com sucesso');
-    } catch (error) {
-        console.error('Erro ao enviar mensagem:', error);
-    }
-}
+// Inicialização do cliente do WhatsApp
+client.initialize();
 
 // Configuração do Socket.IO para comunicação em tempo real
+let authenticated = false;
+
 io.on('connection', function (socket) {
-    initializeClient(); // Inicializar o cliente apenas uma vez por conexão
     socket.emit('message', 'Conectando...');
 
     // Evento para receber o QR Code e exibi-lo na interface
@@ -240,14 +232,14 @@ io.on('connection', function (socket) {
         console.log('QR RECEIVED', qr);
         qrcode.toDataURL(qr, (err, url) => {
             socket.emit('qr', url);
-            socket.emit('message', 'QRCode recebido, aponte a câmera do seu celular!');
+            socket.emit('message', 'BOT-ZDG QRCode recebido, aponte a câmera do seu celular!');
         });
     });
 
     // Evento disparado quando o cliente está pronto para uso
     client.on('ready', async () => {
-        socket.emit('ready', 'Dispositivo pronto!');
-        socket.emit('message', 'Dispositivo pronto!');
+        socket.emit('ready', 'BOT-ZDG Dispositivo pronto!');
+        socket.emit('message', 'BOT-ZDG Dispositivo pronto!');
 
 
         // Tarefa agendada para executar a lógica de envio de mensagens periodicamente
@@ -267,6 +259,9 @@ io.on('connection', function (socket) {
                     if (agendamento.data_solicitacao && agendamento.data_solicitacao <= hoje && !agendamento.enviado) {
                         // Marcar o agendamento como enviado
                         agendamento.enviado = true;
+                        if (!agendamento.enviado) {
+                            // Marcar o agendamento como enviado
+                            agendamento.enviado = true;
                         if (agendamento.nome !== '') {
                             client.sendMessage(agendamento.fone + '@c.us', agendamento.nome);
                         }
@@ -432,44 +427,13 @@ io.on('connection', function (socket) {
         });
 
     });
-
-    // Função para verificar se o cliente já está autenticado
-    function checkAuthentication() {
-        return new Promise((resolve, reject) => {
-            fs.readFile('auth_indicator.txt', 'utf8', (err, data) => {
-                if (err) {
-                    // O arquivo de indicador de autenticação não existe ou não pode ser lido
-                    resolve(false);
-                } else {
-                    // O arquivo de indicador de autenticação existe
-                    resolve(true);
-                }
-            });
-        });
-    }
-
     // Evento disparado quando o cliente é autenticado com sucesso
-    client.on('authenticated', async () => {
-        const authenticated = await checkAuthentication();
-
+    client.on('authenticated', () => {
         if (!authenticated) {
-            // Cliente autenticado pela primeira vez, salvar o indicador de autenticação
-            fs.writeFile('auth_indicator.txt', 'authenticated', err => {
-                if (err) {
-                    console.error('Erro ao salvar o indicador de autenticação:', err);
-                } else {
-                    console.log('Indicador de autenticação salvo com sucesso');
-                }
-            });
-
-            isClientAuthenticated = true;
-
+            authenticated = true;
             socket.emit('authenticated', 'BOT-ZDG Autenticado!');
             socket.emit('message', 'BOT-ZDG Autenticado!');
             console.log('BOT-ZDG Autenticado');
-        } else {
-            isClientAuthenticated = true;
-            console.log('O cliente já está autenticado');
         }
     });
 
@@ -489,29 +453,10 @@ io.on('connection', function (socket) {
         socket.emit('message', 'BOT-ZDG Cliente desconectado!');
         console.log('BOT-ZDG Cliente desconectado', reason);
         client.initialize();
-        isClientAuthenticated = false;
     });
+});
 
-    // Configuração do socket.io
-    io.on('connection', function (socket) {
-        console.log('Nova conexão:', socket.id);
-
-        // Evento disparado quando o cliente é autenticado com sucesso
-        socket.on('authenticate', async () => {
-            if (isClientAuthenticated) {
-                console.log('O cliente já está autenticado');
-                socket.emit('authenticated', 'BOT-ZDG Autenticado!');
-                socket.emit('message', 'BOT-ZDG Autenticado!');
-            } else {
-                console.log('Autenticando o cliente...');
-                client.initialize();
-            }
-        });
-
-        // Resto do código do socket.io...
-    });
-
-    // Inicialização do servidor
-    server.listen(port, function () {
-        console.log('BOT-ZDG rodando na porta *:' + port);
-    });
+// Inicialização do servidor
+server.listen(port, function () {
+    console.log('BOT-ZDG rodando na porta *:' + port);
+});
